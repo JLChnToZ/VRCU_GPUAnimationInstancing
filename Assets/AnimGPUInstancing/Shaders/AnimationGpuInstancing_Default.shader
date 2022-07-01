@@ -182,9 +182,7 @@
             uint repeatStartFrame = UNITY_ACCESS_INSTANCED_PROP(_RepeatStartFrame_arr, _RepeatStartFrame);
             uint repeatNum  = UNITY_ACCESS_INSTANCED_PROP(_RepeatNum_arr, _RepeatNum);
             repeatNum = max(1, repeatNum);
-            float currentRepeatIndex = (offsetFrame / frameCount) % repeatNum;
-            float currentRepeatFrame = (currentRepeatIndex == 0) ? 0 : repeatStartFrame + currentRepeatIndex - 1;
-            float4x4 rootMat = GetMatrix(currentRepeatFrame, 0, repeatNum, 3, 0, _RepeatTex, _RepeatTex_TexelSize);
+            float4x4 rootMat = GetMatrix(offsetFrame, repeatStartFrame, repeatNum - 1, 3, 0, _RepeatTex, _RepeatTex_TexelSize);
             pos = mul(rootMat, pos);
             normal = mul(rootMat, normal);
         }

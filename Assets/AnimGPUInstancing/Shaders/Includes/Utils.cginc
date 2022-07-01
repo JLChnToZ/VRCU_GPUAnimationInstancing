@@ -12,8 +12,8 @@ float4 GetUV(float index, float4 texelSize)
 float4 GetTexLerp(float currentIndex, float startIndex, float maxIndex, float indexStep, float indexOffset, sampler2D tex, float4 texelSize)
 {
     return lerp(
-        tex2Dlod(tex, GetUV((uint)(floor(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
-        tex2Dlod(tex, GetUV((uint)(ceil(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
+        tex2Dlod(tex, GetUV(trunc(floor(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
+        tex2Dlod(tex, GetUV(trunc(ceil(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
         frac(currentIndex)
     );
 }
