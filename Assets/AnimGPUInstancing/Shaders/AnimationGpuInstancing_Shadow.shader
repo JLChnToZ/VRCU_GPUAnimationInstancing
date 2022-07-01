@@ -168,7 +168,6 @@
 
         float offsetFrame = (offsetSeconds + time) * 30.0;
 
-        float currentFrame = startFrame + offsetFrame;
         float4x4 bone1Mat = GetMatrix(offsetFrame, startFrame, frameCount, _PixelsPerFrame, v.boneIndex.x, _AnimTex, _AnimTex_TexelSize);
         float4x4 bone2Mat = GetMatrix(offsetFrame, startFrame, frameCount, _PixelsPerFrame, v.boneIndex.y, _AnimTex, _AnimTex_TexelSize);
         float4x4 bone3Mat = GetMatrix(offsetFrame, startFrame, frameCount, _PixelsPerFrame, v.boneIndex.z, _AnimTex, _AnimTex_TexelSize);
