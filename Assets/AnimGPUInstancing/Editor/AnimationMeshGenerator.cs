@@ -7,11 +7,13 @@ using System;
 using System.Linq;
 using System.IO;
 using System.Collections.Generic;
+#if UDON
 using UdonSharp;
 using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.Common;
 using VRC.Udon.Common.Interfaces;
+#endif
 
 public class AnimationMeshGenerator : EditorWindow
 {
@@ -29,7 +31,11 @@ public class AnimationMeshGenerator : EditorWindow
     private AnimationClip[] clips;
     private Shader animShader;
     private GameObject goUdon;
+    #if UDON
     private UdonBehaviour udonBehaviour;
+    #else
+    private AnimationFrameInfoList animInfo;
+    #endif
     private float boundsScale = 1.0f;
     private int MaxRepeat = 20;
     private string saveName = "AnimatedMesh";
@@ -77,13 +83,21 @@ public class AnimationMeshGenerator : EditorWindow
                 return;
             }
             goUdon = transUdon.gameObject;
-
+            #if UDON
             udonBehaviour = goUdon.GetComponent<UdonBehaviour>();
             if (udonBehaviour == null)
             {
                 EditorGUILayout.HelpBox($"Udon Behaviour Not Found: ", MessageType.Error);
                 return;
             }
+            #else
+            animInfo = goUdon.GetComponent<AnimationFrameInfoList>();
+            if (animInfo == null)
+            {
+                EditorGUILayout.HelpBox($"Script Not Found: ", MessageType.Error);
+                return;
+            }
+            #endif
 
             EditorGUI.indentLevel--;
         }
@@ -334,7 +348,6 @@ public class AnimationMeshGenerator : EditorWindow
         string savePathMesh = $"{savePath}/Meshs";
         Directory.CreateDirectory(savePathMesh);
 
-
         foreach (SkinnedMeshRenderer skinnedMeshRenderer in skinnedMeshRenderers)
         {
 
@@ -361,16 +374,23 @@ public class AnimationMeshGenerator : EditorWindow
                 AssetDatabase.CreateAsset(material, string.Format($"{savePathMat}/AnimMat_{skinnedMeshRenderer.name}_{material.name}.asset"));
             }
 
+            #if UDON
             // Udon Variable 
             IUdonVariableTable publicVariables = udonBehaviour.publicVariables;
             SetUdonVariable(publicVariables, "FrameInfo", animationInfo, typeof(AnimationFrameInfoList));
+            #else
+            animInfo.FrameInfo = animationInfo;
+            EditorUtility.SetDirty(animInfo);
+            #endif
 
             // Save to GameObject
             GenerateAnimObject(ref animObject, targetObject, animMesh, animMaterials);
         }
 
+        #if UDON
         // Add Udon Behaviour 
         AddUdonBehaviour(ref animObject, goUdon);
+        #endif
 
         // Save to Prefab
         PrefabUtility.SaveAsPrefabAsset(animObject, $"{savePath}/{targetObject.name}_Anim.prefab");
@@ -603,6 +623,12 @@ public class AnimationMeshGenerator : EditorWindow
         animObject.transform.SetParent(parentObject.transform);
     }
 
+    public static Vector3 ToVector3(Vector4 parent)
+    {
+        return new Vector3(parent.x, parent.y, parent.z);
+    }
+
+#if UDON
     private static void AddUdonBehaviour(ref GameObject animObject, GameObject goUdon)
     {
 
@@ -618,11 +644,6 @@ public class AnimationMeshGenerator : EditorWindow
 
         }
 
-    }
-
-    public static Vector3 ToVector3(Vector4 parent)
-    {
-        return new Vector3(parent.x, parent.y, parent.z);
     }
 
     private static void SetUdonVariable(IUdonVariableTable publicVariables, string name, object value, Type declaredType)
@@ -645,6 +666,7 @@ public class AnimationMeshGenerator : EditorWindow
         return (IUdonVariable)Activator.CreateInstance(udonVariableType, symbolName, value);
 
     }
+#endif
 }
 
 #endif

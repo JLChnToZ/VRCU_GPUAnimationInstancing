@@ -23,6 +23,14 @@
         _RepeatMax("Repeat Max", FLoat) = 1
         _RepeatNum ("Repeat Num", Float) = 1
     
+        _BaseSpeed ("Base Speed", Float) = 1
+        _TimeNoise ("Position Based Timing Noise", Float) = 0
+
+        [Toggle(_AUDIOLINK)] _AUDIOLINK("AudioLink", Int) = 0
+        [Enum(AudioLinkChronotensityType)] _AudioLinkChronotensityIndex ("AudioLink Chronotensity Mode", Int) = 0
+        [Enum(None, 0, Bass, 1, Low Mid, 2, High Mid, 3, Treble, 4)]
+        _AudioLinkBand ("AudioLink Band", Int) = 0
+        _AudioLinkSpeed ("AudioLink Speed", Float) = 1
 
         [KeywordEnum(UNLIT, REAL)]
         _LIGHTING("Lighting", Float) = 0
@@ -37,6 +45,11 @@
     #include "UnityCG.cginc"
     #include "Includes/Utils.cginc"
     
+    #pragma shader_feature_local AUDIOLINK
+
+    #if AUDIOLINK
+    #include "Assets/AudioLink/Shaders/AudioLink.cginc"
+    #endif
 
     struct appdata
     {
@@ -87,7 +100,14 @@
 
     UNITY_DEFINE_INSTANCED_PROP(fixed4, _Color)
     #define _Color_arr Props
-    
+
+    #if AUDIOLINK
+    UNITY_DEFINE_INSTANCED_PROP(int, _AudioLinkChronotensityIndex)
+    #define _AudioLinkChronotensityIndex_arr Props
+
+    UNITY_DEFINE_INSTANCED_PROP(int, _AudioLinkBand)
+    #define _AudioLinkBand_arr Props
+    #endif
 
     UNITY_INSTANCING_BUFFER_END(Props)
 
@@ -111,6 +131,13 @@
     half _Shininess;
     float4 _LightColor0;
 
+    float _BaseSpeed;
+    float _TimeNoise;
+
+    #if AUDIOLINK
+    float _AudioLinkSpeed;
+    #endif
+
     v2f vert (appdata v)
     {
         v2f o;
@@ -122,45 +149,46 @@
         uint frameCount = UNITY_ACCESS_INSTANCED_PROP(_FrameCount_arr, _FrameCount);
         float offsetSeconds = UNITY_ACCESS_INSTANCED_PROP(_OffsetSeconds_arr, _OffsetSeconds);
 
-        float time = _Time.y;
+        float time = _Time.y * _BaseSpeed + _TimeNoise * (rand(floor(mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xz * 100.)) - 0.5);
+        #if AUDIOLINK
+        if (!AudioLinkIsAvailable())
+        {
+            time += _Time.y * _AudioLinkSpeed;
+        }
+        else
+        {
+            int band = UNITY_ACCESS_INSTANCED_PROP(_AudioLinkBand_arr, _AudioLinkBand) - 1;
+            if (band >= 0)
+            {
+                int choroIndex = UNITY_ACCESS_INSTANCED_PROP(_AudioLinkBand_arr, _AudioLinkChronotensityIndex);
+                time += AudioLinkGetChronoTime(choroIndex, band) * _AudioLinkSpeed;
+            }
+        }
+        #endif
 
-        uint offsetFrame = (uint)((time + offsetSeconds) * 30.0);
-        uint currentFrame = startFrame + offsetFrame % frameCount;
+        float offsetFrame = (offsetSeconds + time) * 30.0;
 
-        uint clampedIndex = currentFrame * _PixelsPerFrame;
-        float4x4 bone1Mat = GetMatrix(clampedIndex, v.boneIndex.x, _AnimTex, _AnimTex_TexelSize);
-        float4x4 bone2Mat = GetMatrix(clampedIndex, v.boneIndex.y, _AnimTex, _AnimTex_TexelSize);
-        float4x4 bone3Mat = GetMatrix(clampedIndex, v.boneIndex.z, _AnimTex, _AnimTex_TexelSize);
-        float4x4 bone4Mat = GetMatrix(clampedIndex, v.boneIndex.w, _AnimTex, _AnimTex_TexelSize);
+        float currentFrame = startFrame + offsetFrame;
+        float4x4 bone1Mat = GetMatrix(currentFrame, frameCount, _PixelsPerFrame, v.boneIndex.x, _AnimTex, _AnimTex_TexelSize);
+        float4x4 bone2Mat = GetMatrix(currentFrame, frameCount, _PixelsPerFrame, v.boneIndex.y, _AnimTex, _AnimTex_TexelSize);
+        float4x4 bone3Mat = GetMatrix(currentFrame, frameCount, _PixelsPerFrame, v.boneIndex.z, _AnimTex, _AnimTex_TexelSize);
+        float4x4 bone4Mat = GetMatrix(currentFrame, frameCount, _PixelsPerFrame, v.boneIndex.w, _AnimTex, _AnimTex_TexelSize);
 
-        float4 pos = 
-            mul(bone1Mat, v.vertex) * v.boneWeight.x + 
-            mul(bone2Mat, v.vertex) * v.boneWeight.y + 
-            mul(bone3Mat, v.vertex) * v.boneWeight.z + 
-            mul(bone4Mat, v.vertex) * v.boneWeight.w;
-
-
-        float4 normal = 
-            mul(bone1Mat, v.normal) * v.boneWeight.x +  
-            mul(bone2Mat, v.normal) * v.boneWeight.y +  
-            mul(bone3Mat, v.normal) * v.boneWeight.z+  
-            mul(bone4Mat, v.normal) * v.boneWeight.w;  
-
+        float4 pos = MultiplyBones(v.vertex, bone1Mat, bone2Mat, bone3Mat, bone4Mat, v.boneWeight);
+        float4 normal = MultiplyBones(float4(v.normal, 0), bone1Mat, bone2Mat, bone3Mat, bone4Mat, v.boneWeight);
 
         uint _root_motion = UNITY_ACCESS_INSTANCED_PROP(_ROOT_MOTION_arr, _ROOT_MOTION);
-        uint repeatStartFrame = UNITY_ACCESS_INSTANCED_PROP(_RepeatStartFrame_arr, _RepeatStartFrame);
-        uint repeatNum  = UNITY_ACCESS_INSTANCED_PROP(_RepeatNum_arr, _RepeatNum);
-        repeatNum = max(1, repeatNum);
-        uint currentRepeatIndex =  (uint)(offsetFrame / frameCount) % repeatNum;
-        uint currentRepeatFrame = (currentRepeatIndex == 0)? 0 :  repeatStartFrame + currentRepeatIndex - 1;
-        uint clampedRepeatIndex = currentRepeatFrame * 3;
-        float4x4 rootMat = GetMatrix(clampedRepeatIndex, 0, _RepeatTex, _RepeatTex_TexelSize);
-
-        rootMat = (_root_motion) ? rootMat : Mat4x4Identity;
-
-
-        pos = mul(rootMat, pos);
-        normal = mul(rootMat, normal);
+        if (_root_motion)
+        {
+            uint repeatStartFrame = UNITY_ACCESS_INSTANCED_PROP(_RepeatStartFrame_arr, _RepeatStartFrame);
+            uint repeatNum  = UNITY_ACCESS_INSTANCED_PROP(_RepeatNum_arr, _RepeatNum);
+            repeatNum = max(1, repeatNum);
+            float currentRepeatIndex = (offsetFrame / frameCount) % repeatNum;
+            float currentRepeatFrame = (currentRepeatIndex == 0) ? 0 : repeatStartFrame + currentRepeatIndex - 1;
+            float4x4 rootMat = GetMatrix(currentRepeatFrame, repeatNum, 3, 0, _RepeatTex, _RepeatTex_TexelSize);
+            pos = mul(rootMat, pos);
+            normal = mul(rootMat, normal);
+        }
 
         o.vertex = UnityObjectToClipPos(pos);
         UNITY_TRANSFER_FOG(o,o.vertex);

@@ -22,6 +22,14 @@ public class AGI_ShaderInspector : ShaderGUI
     MaterialProperty repeatMax;
     MaterialProperty repeatNum;
 
+    MaterialProperty baseSpeed;
+    MaterialProperty timeNoise;
+
+    MaterialProperty audioLink;
+    MaterialProperty alChronoIndex;
+    MaterialProperty alBand;
+    MaterialProperty alSpeed;
+
     MaterialProperty isPause;
     MaterialProperty isLighting;
     MaterialProperty shininess;
@@ -52,6 +60,14 @@ public class AGI_ShaderInspector : ShaderGUI
         repeatStartFrame = FindProperty("_RepeatStartFrame", props);
         repeatMax = FindProperty("_RepeatMax", props);
         repeatNum = FindProperty("_RepeatNum", props);
+
+        baseSpeed = FindProperty("_BaseSpeed", props);
+        timeNoise = FindProperty("_TimeNoise", props);
+
+        audioLink = FindProperty("_AUDIOLINK", props);
+        alChronoIndex = FindProperty("_AudioLinkChronotensityIndex", props);
+        alBand = FindProperty("_AudioLinkBand", props);
+        alSpeed = FindProperty("_AudioLinkSpeed", props);
 
         isLighting = FindProperty("_LIGHTING", props);
         shininess = FindProperty("_Shininess", props);
@@ -99,6 +115,25 @@ public class AGI_ShaderInspector : ShaderGUI
 
         EditorGUILayout.Space();
 
+        /* *** Speed *** */
+        materialEditor.ShaderProperty(baseSpeed, baseSpeed.displayName);
+        materialEditor.ShaderProperty(timeNoise, timeNoise.displayName);
+
+        EditorGUILayout.Space();
+
+        /* *** AudioLink *** */
+        materialEditor.ShaderProperty(audioLink, audioLink.displayName);
+
+        EditorGUI.indentLevel++;
+        if (audioLink.floatValue == 1F)
+        {
+            materialEditor.ShaderProperty(alChronoIndex, alChronoIndex.displayName);
+            materialEditor.ShaderProperty(alBand, alBand.displayName);
+            materialEditor.ShaderProperty(alSpeed, alSpeed.displayName);
+        }
+        EditorGUI.indentLevel--;
+
+        EditorGUILayout.Space();
 
         /* *** Lighting *** */
 
@@ -126,4 +161,16 @@ public class AGI_ShaderInspector : ShaderGUI
 
 
     }
+}
+
+enum AudioLinkChronotensityType
+{
+    MotionAsIntensity,
+    MotionAsIntensityFiltered,
+    MotionBackAndForth,
+    MotionBackAndForthFiltered,
+    SpeedUpOnDark,
+    SpeedUpOnDarkFiltered,
+    SpeedUpOnDarkSlowDownOnLight,
+    SpeedUpOnDarkSlowDownOnLightFiltered,
 }

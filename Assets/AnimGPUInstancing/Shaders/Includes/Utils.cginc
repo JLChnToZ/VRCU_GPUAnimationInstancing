@@ -1,24 +1,44 @@
 #ifndef _AnimationGpuInstancing
 #define _AnimationGpuInstancing
 
-float4 GetUV(uint index, float4 texelSize)
+float4 GetUV(float index, float4 texelSize)
 {
-    float row = index / (uint)texelSize.z + 0.5;
-    float col = index % (uint)texelSize.z + 0.5;
+    float row = floor(index * texelSize.x) + 0.5;
+    float col = floor(index % texelSize.z) + 0.5;
 
-    return float4(col  / texelSize.z, row / texelSize.w, 0.0, 0.0);
+    return float4(col * texelSize.x, row * texelSize.y, 0.0, 0.0);
 }
 
-float4x4 GetMatrix(uint startIndex, float boneIndex, sampler2D tex, float4 texelSize)
+float4 GetTexLerp(float index, float maxIndex, float indexStep, float indexOffset, sampler2D tex, float4 texelSize)
 {
-    uint index = startIndex + boneIndex * 3;
+    return lerp(
+        tex2Dlod(tex, GetUV((uint)(floor(index) % maxIndex * indexStep + indexOffset), texelSize)),
+        tex2Dlod(tex, GetUV((uint)(ceil(index) % maxIndex * indexStep + indexOffset), texelSize)),
+        frac(index)
+    );
+}
 
-    float4 row0 = tex2Dlod(tex, GetUV(index, texelSize));
-    float4 row1 = tex2Dlod(tex, GetUV(index + 1, texelSize));
-    float4 row2 = tex2Dlod(tex, GetUV(index + 2, texelSize));
+float4x4 GetMatrix(float startIndex, float maxIndex, float indexStep, float boneIndex, sampler2D tex, float4 texelSize)
+{
+    float4 row0 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3, tex, texelSize);
+    float4 row1 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3 + 1, tex, texelSize);
+    float4 row2 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3 + 2, tex, texelSize);
     float4 row3 = float4(0.0, 0.0, 0.0, 1.0);
 
     return float4x4(row0, row1, row2, row3);
+}
+
+float4 MultiplyBones(float4 src, float4x4 bone1Mat, float4x4 bone2Mat, float4x4 bone3Mat, float4x4 bone4Mat, float4 boneWeight)
+{
+    return mul(bone1Mat, src) * boneWeight.x + 
+        mul(bone2Mat, src) * boneWeight.y + 
+        mul(bone3Mat, src) * boneWeight.z + 
+        mul(bone4Mat, src) * boneWeight.w;
+}
+
+float rand(float2 n)
+{
+    return frac(sin((n.x * 1e2 + n.y * 1e4 + 1475.4526) * 1e-4) * 1e6);
 }
 
 #endif 
