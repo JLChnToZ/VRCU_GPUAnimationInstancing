@@ -9,20 +9,20 @@ float4 GetUV(float index, float4 texelSize)
     return float4(col * texelSize.x, row * texelSize.y, 0.0, 0.0);
 }
 
-float4 GetTexLerp(float index, float maxIndex, float indexStep, float indexOffset, sampler2D tex, float4 texelSize)
+float4 GetTexLerp(float currentIndex, float startIndex, float maxIndex, float indexStep, float indexOffset, sampler2D tex, float4 texelSize)
 {
     return lerp(
-        tex2Dlod(tex, GetUV((uint)(floor(index) % maxIndex * indexStep + indexOffset), texelSize)),
-        tex2Dlod(tex, GetUV((uint)(ceil(index) % maxIndex * indexStep + indexOffset), texelSize)),
-        frac(index)
+        tex2Dlod(tex, GetUV((floor(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
+        tex2Dlod(tex, GetUV((ceil(currentIndex) % maxIndex + startIndex) * indexStep + indexOffset, texelSize)),
+        frac(currentIndex)
     );
 }
 
-float4x4 GetMatrix(float startIndex, float maxIndex, float indexStep, float boneIndex, sampler2D tex, float4 texelSize)
+float4x4 GetMatrix(float currentIndex, float startIndex, float maxIndex, float indexStep, float boneIndex, sampler2D tex, float4 texelSize)
 {
-    float4 row0 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3, tex, texelSize);
-    float4 row1 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3 + 1, tex, texelSize);
-    float4 row2 = GetTexLerp(startIndex, maxIndex, indexStep, boneIndex * 3 + 2, tex, texelSize);
+    float4 row0 = GetTexLerp(currentIndex, startIndex, maxIndex, indexStep, boneIndex * 3, tex, texelSize);
+    float4 row1 = GetTexLerp(currentIndex, startIndex, maxIndex, indexStep, boneIndex * 3 + 1, tex, texelSize);
+    float4 row2 = GetTexLerp(currentIndex, startIndex, maxIndex, indexStep, boneIndex * 3 + 2, tex, texelSize);
     float4 row3 = float4(0.0, 0.0, 0.0, 1.0);
 
     return float4x4(row0, row1, row2, row3);
