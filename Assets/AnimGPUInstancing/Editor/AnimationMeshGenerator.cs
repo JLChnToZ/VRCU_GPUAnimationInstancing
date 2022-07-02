@@ -362,7 +362,7 @@ public class AnimationMeshGenerator : EditorWindow
 
 
             // Material 
-            Material[] animMaterials = GenerateMaterials(targetObject, skinnedMeshRenderer, animTexture, animRepeatTexture, animShader, clips.ToList(), pixelsPerFrame, MaxRepeat);
+            Material[] animMaterials = GenerateMaterials(targetObject, skinnedMeshRenderer, animTexture, animRepeatTexture, animShader, clips.ToList(), pixelsPerFrame, MaxRepeat, animationInfo.Length > 0 ? animationInfo[0] : Vector4.zero);
 
             // Save Each Asset 
             AssetDatabase.CreateAsset(animMesh, string.Format($"{savePathMesh}/AnimMesh_{skinnedMeshRenderer.name}.asset"));
@@ -585,7 +585,7 @@ public class AnimationMeshGenerator : EditorWindow
 
     }
 
-    private static Material[] GenerateMaterials(GameObject go, SkinnedMeshRenderer smr, Texture tex, Texture texRepeat, Shader shader, List<AnimationClip> clips, int pixelsPerFrame, int MaxRepeat)
+    private static Material[] GenerateMaterials(GameObject go, SkinnedMeshRenderer smr, Texture tex, Texture texRepeat, Shader shader, List<AnimationClip> clips, int pixelsPerFrame, int MaxRepeat, Vector4 FirstClipInfo)
     {
         Material[] materials = new Material[smr.sharedMaterials.Length];
 
@@ -600,7 +600,8 @@ public class AnimationMeshGenerator : EditorWindow
 
             materials[i].SetTexture("_RepeatTex", texRepeat);
             materials[i].SetFloat("_RepeatMax", MaxRepeat);
-
+            materials[i].SetFloat("_StartFrame", FirstClipInfo.x);
+            materials[i].SetFloat("_FrameCount", FirstClipInfo.y);
         }
 
         return materials;
