@@ -27,7 +27,7 @@ UNITY_DEFINE_INSTANCED_PROP(uint, _StartFrame)
 UNITY_DEFINE_INSTANCED_PROP(uint, _FrameCount)
 #define _FrameCount_arr Props
 
-UNITY_DEFINE_INSTANCED_PROP(uint, _OffsetSeconds)
+UNITY_DEFINE_INSTANCED_PROP(float, _OffsetSeconds)
 #define _OffsetSeconds_arr Props
 
 UNITY_DEFINE_INSTANCED_PROP(uint, _ROOT_MOTION)
@@ -38,9 +38,6 @@ UNITY_DEFINE_INSTANCED_PROP(uint, _RepeatStartFrame)
 
 UNITY_DEFINE_INSTANCED_PROP(uint, _RepeatNum)
 #define _RepeatNum_arr Props
-
-UNITY_DEFINE_INSTANCED_PROP(fixed4, _Color)
-#define _Color_arr Props
 
 #if _AUDIOLINK
 UNITY_DEFINE_INSTANCED_PROP(int, _AudioLinkChronotensityIndex)

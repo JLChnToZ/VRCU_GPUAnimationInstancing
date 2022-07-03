@@ -45,6 +45,11 @@
 
     #include "Includes/AnimationGpuInstancing_Common.cginc"
 
+    UNITY_INSTANCING_BUFFER_START(Props2)
+    UNITY_DEFINE_INSTANCED_PROP(fixed4, _Color)
+    #define _Color_arr Props2
+    UNITY_INSTANCING_BUFFER_END(Props2)
+
     struct v2f
     {
         float2 uv : TEXCOORD0;
